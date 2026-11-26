@@ -1,0 +1,650 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistem Kasir Makanan</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background: #f3f5f9;
+    color: #1e293b;
+}
+
+header {
+    background: linear-gradient(135deg, #0f172a, #1e40af);
+    color: white;
+    padding: 28px 7%;
+}
+
+header h1 {
+    font-size: 28px;
+}
+
+header p {
+    margin-top: 8px;
+    color: #cbd5e1;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 30px auto;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+    margin-bottom: 25px;
+}
+
+.stat-card {
+    background: white;
+    padding: 22px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+.stat-card h3 {
+    color: #64748b;
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+
+.stat-card p {
+    font-size: 25px;
+    font-weight: bold;
+    color: #1e40af;
+}
+
+.card {
+    background: white;
+    padding: 25px;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    margin-bottom: 25px;
+}
+
+.card h2 {
+    margin-bottom: 20px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    outline: none;
+}
+
+input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px #dbeafe;
+}
+
+.form-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+button {
+    border: none;
+    padding: 11px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.2s;
+}
+
+button:hover {
+    opacity: 0.85;
+    transform: translateY(-1px);
+}
+
+.btn-primary {
+    background: #2563eb;
+    color: white;
+}
+
+.btn-secondary {
+    background: #64748b;
+    color: white;
+}
+
+.btn-edit {
+    background: #f59e0b;
+    color: white;
+    padding: 8px 12px;
+}
+
+.btn-delete {
+    background: #ef4444;
+    color: white;
+    padding: 8px 12px;
+}
+
+.search-box {
+    max-width: 350px;
+    margin-bottom: 18px;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 650px;
+}
+
+thead {
+    background: #eff6ff;
+}
+
+th, td {
+    padding: 14px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+th {
+    color: #1e40af;
+}
+
+tbody tr:hover {
+    background: #f8fafc;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+}
+
+.status {
+    padding: 12px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    display: none;
+}
+
+.status.success {
+    display: block;
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status.error {
+    display: block;
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status.info {
+    display: block;
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.empty {
+    text-align: center;
+    color: #64748b;
+    padding: 30px;
+}
+
+@media (max-width: 600px) {
+    header {
+        padding: 25px 5%;
+    }
+
+    .container {
+        width: 94%;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .card {
+        padding: 18px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>🍽️ Sistem Kasir Makanan</h1>
+    <p>Manajemen data makanan • Supabase Database</p>
+</header>
+
+<div class="container">
+
+    <div class="stats">
+        <div class="stat-card">
+            <h3>Jumlah Produk</h3>
+            <p id="totalProduk">0</p>
+        </div>
+
+        <div class="stat-card">
+            <h3>Total Nilai Harga Produk</h3>
+            <p id="totalHarga">Rp0</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 id="formTitle">➕ Tambah Makanan</h2>
+
+        <div id="status" class="status"></div>
+
+        <form id="formMakanan">
+            <div class="form-grid">
+
+                <div>
+                    <label for="nama">Nama Makanan</label>
+                    <input
+                        type="text"
+                        id="nama"
+                        placeholder="Masukkan nama makanan"
+                        required
+                    >
+                </div>
+
+                <div>
+                    <label for="harga">Harga Makanan (Rp)</label>
+                    <input
+                        type="number"
+                        id="harga"
+                        placeholder="Masukkan harga"
+                        min="0"
+                        step="1"
+                        required
+                    >
+                </div>
+
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-primary" id="btnSimpan">
+                    💾 Simpan Makanan
+                </button>
+
+                <button
+                    type="button"
+                    class="btn-secondary"
+                    id="btnBatal"
+                    style="display:none"
+                    onclick="batalEdit()"
+                >
+                    ❌ Batal Edit
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>📋 Data Makanan</h2>
+
+        <input
+            type="text"
+            id="search"
+            class="search-box"
+            placeholder="🔍 Cari nama makanan..."
+        >
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID Makanan</th>
+                        <th>Nama Makanan</th>
+                        <th>Harga</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+
+                <tbody id="tbody">
+                    <tr>
+                        <td colspan="4" class="empty">Memuat data...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ==========================================
+// KONFIGURASI SUPABASE
+// ==========================================
+
+const SUPABASE_URL = "MASUKKAN_PROJECT_URL";
+const SUPABASE_KEY = "MASUKKAN_ANON_ATAU_PUBLISHABLE_KEY";
+
+const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+);
+
+// ==========================================
+// VARIABEL
+// ==========================================
+
+let dataMakanan = [];
+let modeEdit = false;
+let idEdit = null;
+
+// ==========================================
+// FORMAT RUPIAH
+// ==========================================
+
+function rupiah(angka) {
+    return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        maximumFractionDigits: 0
+    }).format(angka || 0);
+}
+
+// ==========================================
+// PESAN STATUS
+// ==========================================
+
+function tampilStatus(pesan, jenis = "success") {
+    const status = document.getElementById("status");
+
+    status.className = "status " + jenis;
+    status.textContent = pesan;
+
+    setTimeout(() => {
+        status.className = "status";
+    }, 4000);
+}
+
+// ==========================================
+// SELECT / TAMPIL DATA
+// ==========================================
+
+async function tampilData() {
+    const tbody = document.getElementById("tbody");
+
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="4" class="empty">Memuat data...</td>
+        </tr>
+    `;
+
+    const { data, error } = await supabaseClient
+        .from("makanan")
+        .select("*")
+        .order("id_makanan", { ascending: true });
+
+    if (error) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="empty">Gagal memuat data</td>
+            </tr>
+        `;
+
+        tampilStatus("Error: " + error.message, "error");
+        return;
+    }
+
+    dataMakanan = data || [];
+
+    renderData();
+    hitungStatistik();
+}
+
+// ==========================================
+// RENDER DATA TABEL
+// ==========================================
+
+function renderData() {
+    const tbody = document.getElementById("tbody");
+    const keyword = document.getElementById("search").value.toLowerCase();
+
+    const filtered = dataMakanan.filter(item =>
+        item.nama_makanan.toLowerCase().includes(keyword)
+    );
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="empty">
+                    Data makanan tidak ditemukan.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(item => `
+        <tr>
+            <td>${item.id_makanan}</td>
+            <td>${escapeHTML(item.nama_makanan)}</td>
+            <td>${rupiah(item.harga)}</td>
+            <td>
+                <div class="actions">
+                    <button
+                        class="btn-edit"
+                        onclick="editMakanan(${item.id_makanan})"
+                    >
+                        ✏️ Edit
+                    </button>
+
+                    <button
+                        class="btn-delete"
+                        onclick="hapusMakanan(${item.id_makanan})"
+                    >
+                        🗑️ Hapus
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join("");
+}
+
+// Mencegah nama makanan memasukkan HTML berbahaya
+function escapeHTML(text) {
+    return String(text).replace(/[&<>"']/g, function(char) {
+        return {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#039;"
+        }[char];
+    });
+}
+
+// ==========================================
+// STATISTIK
+// ==========================================
+
+function hitungStatistik() {
+    document.getElementById("totalProduk").textContent =
+        dataMakanan.length;
+
+    const total = dataMakanan.reduce((sum, item) => {
+        return sum + Number(item.harga);
+    }, 0);
+
+    document.getElementById("totalHarga").textContent = rupiah(total);
+}
+
+// ==========================================
+// INSERT / TAMBAH DATA
+// ==========================================
+
+document.getElementById("formMakanan")
+.addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const nama = document.getElementById("nama").value.trim();
+    const harga = Number(document.getElementById("harga").value);
+
+    if (!nama || harga < 0 || !Number.isFinite(harga)) {
+        tampilStatus("Nama dan harga harus diisi dengan benar!", "error");
+        return;
+    }
+
+    const btn = document.getElementById("btnSimpan");
+    btn.disabled = true;
+    btn.textContent = "⏳ Menyimpan...";
+
+    // INSERT
+    if (!modeEdit) {
+        const { error } = await supabaseClient
+            .from("makanan")
+            .insert([
+                {
+                    nama_makanan: nama,
+                    harga: harga
+                }
+            ]);
+
+        if (error) {
+            tampilStatus("Gagal menambah: " + error.message, "error");
+        } else {
+            tampilStatus("Makanan berhasil ditambahkan!");
+            this.reset();
+            await tampilData();
+        }
+    }
+
+    // UPDATE / EDIT
+    else {
+        const { error } = await supabaseClient
+            .from("makanan")
+            .update({
+                nama_makanan: nama,
+                harga: harga
+            })
+            .eq("id_makanan", idEdit);
+
+        if (error) {
+            tampilStatus("Gagal mengedit: " + error.message, "error");
+        } else {
+            tampilStatus("Data makanan berhasil diubah!");
+            batalEdit();
+            await tampilData();
+        }
+    }
+
+    btn.disabled = false;
+    btn.textContent = modeEdit ? "💾 Simpan Perubahan" : "💾 Simpan Makanan";
+});
+
+// ==========================================
+// EDIT DATA
+// ==========================================
+
+function editMakanan(id) {
+    const item = dataMakanan.find(m => m.id_makanan === id);
+
+    if (!item) return;
+
+    modeEdit = true;
+    idEdit = id;
+
+    document.getElementById("nama").value = item.nama_makanan;
+    document.getElementById("harga").value = item.harga;
+
+    document.getElementById("formTitle").textContent = "✏️ Edit Makanan";
+    document.getElementById("btnSimpan").textContent = "💾 Simpan Perubahan";
+    document.getElementById("btnBatal").style.display = "inline-block";
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+}
+
+// ==========================================
+// BATAL EDIT
+// ==========================================
+
+function batalEdit() {
+    modeEdit = false;
+    idEdit = null;
+
+    document.getElementById("formMakanan").reset();
+    document.getElementById("formTitle").textContent = "➕ Tambah Makanan";
+    document.getElementById("btnSimpan").textContent = "💾 Simpan Makanan";
+    document.getElementById("btnBatal").style.display = "none";
+}
+
+// ==========================================
+// DELETE / HAPUS DATA
+// ==========================================
+
+async function hapusMakanan(id) {
+    const item = dataMakanan.find(m => m.id_makanan === id);
+
+    if (!item) return;
+
+    const yakin = confirm(
+        "Apakah kamu yakin ingin menghapus makanan: " +
+        item.nama_makanan + "?"
+    );
+
+    if (!yakin) return;
+
+    const { error } = await supabaseClient
+        .from("makanan")
+        .delete()
+        .eq("id_makanan", id);
+
+    if (error) {
+        tampilStatus("Gagal menghapus: " + error.message, "error");
+    } else {
+        tampilStatus("Data makanan berhasil dihapus!");
+        await tampilData();
+    }
+}
+
+// ==========================================
+// SEARCH
+// ==========================================
+
+document.getElementById("search")
+.addEventListener("input", renderData);
+
+// ==========================================
+// MULAI PROGRAM
+// ==========================================
+
+tampilData();
+</script>
+
+</body>
+</html>
